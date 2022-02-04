@@ -11,6 +11,7 @@
  *
  * See also: discs.v, auxHanoi.v
  *)
+Require Import discs auxHanoi.
 
 
 (*************)
@@ -18,10 +19,10 @@
 (*************)
 
 Parameter Pole : Set.
-Parameter onPole : Pole -> (list Disc) -> ILinProp.
+Parameter onPole : Pole -> list Disc -> ILinProp.
 
 Definition empty : Pole -> ILinProp := 
-  [p:Pole] (onPole p (nil Disc)).
+  fun p:Pole => onPole p (@nil Disc).
 
 
 (*********************)
@@ -29,12 +30,12 @@ Definition empty : Pole -> ILinProp :=
 (*********************)
 
 (* Assume we can move one disc *)
-Axiom Txfr : 
-  (p1,p2:Pole)
-  (f:Disc)(fs,ts:(list Disc)) (canTxfrTo f ts) ->
-  (`((onPole p1 (cons f fs))**(onPole p2 ts))
+Axiom Txfr :
+  forall (p1 p2:Pole)
+  (f:Disc)(fs ts:list Disc), canTxfrTo f ts ->
+  ([(onPole p1 (cons f fs))***(onPole p2 ts)]
 |-
-  ((onPole p1 fs) ** (onPole p2 (cons f ts)))).
+  ((onPole p1 fs) *** (onPole p2 (cons f ts)))).
 
 
 (* Now prove that this scales up to n discs ... *)
@@ -47,66 +48,65 @@ Axiom Txfr :
  *  c) Prove that the state-invariant predicates still hold true
  *)
 
-Lemma Move :
-  (dTop,dBot:(list Disc))
-  (p1,p2,p3:Pole) (d2,d3:(list Disc)) 
-  (ordered dTop) -> 
-  (canMoveTo dTop dBot) -> (canMoveTo dTop d2) -> (canMoveTo dTop d3) ->
-  (`((onPole p1 (dTop^dBot))**(onPole p2 d2)**(onPole p3 d3))
+Lemma Move
+  (dTop dBot:list Disc)
+  (p1 p2 p3:Pole) (d2 d3:list Disc):
+  ordered dTop ->
+  canMoveTo dTop dBot -> canMoveTo dTop d2 -> canMoveTo dTop d3 ->
+  ([(onPole p1 (dTop++dBot))***(onPole p2 d2)***(onPole p3 d3)]
 |-
-  (onPole p1 dBot) ** (onPole p2 d2) ** (onPole p3 (dTop^d3))).
+  (onPole p1 dBot) *** (onPole p2 d2) *** (onPole p3 (dTop++d3))).
 Proof.
-  Intros dTop; Apply rev_ind with l:=dTop. (* Reverse Induction on dTop *)
+  revert dBot p1 p2 p3 d2 d3.
+  apply rev_ind with (l:=dTop). (* Reverse Induction on dTop *)
 
 
   (* Base Case: dTop is nil *)
-  Intros ; Simpl; Apply Identity.
+  intros; simpl; apply Identity.
 
 
   (* Inductive Case: dTop is (cons d ds) *)
-  Intros d ds MOVE dBot p1 p2 p3 d2 d3 ORD.
-  Unfold canMoveTo; Intros CM1 CM2 CM3.
+  intros d ds MOVE dBot p1 p2 p3 d2 d3 ORD.
+  unfold canMoveTo; intros CM1 CM2 CM3.
 
   (* Mark out the "states" we're going to go through *)
-  LinCut (onPole p1 dBot)**(onPole p2 (ds^d2))**(onPole p3 (`d^d3)).
-  LinCut (onPole p1 (`d^dBot))**(onPole p2 (ds^d2))**(onPole p3 d3).
+  lincut (onPole p1 dBot)***(onPole p2 (ds++d2))***(onPole p3 ([d]++d3)).
+  lincut (onPole p1 ([d]++dBot))***(onPole p2 (ds++d2))***(onPole p3 d3).
 
   (* Step 1: (Move ds from p1 to p2) *)
-  Rewrite (app_ass ds).  Apply Swap23.
-  Apply MOVE;
-    Try (Unfold canMoveTo; Apply AllCat with l1:=ds l2:=`d; Assumption).
-  Apply OrdCat with d1:=ds d2:=`d; Assumption.
-  Apply CanMoveApp.
-  Apply OrdMove; Assumption.
-  (Unfold canMoveTo; Apply AllCat with l1:=ds l2:=`d; Assumption).
+  rewrite <- (app_assoc ds). apply Swap23.
+  apply MOVE;
+    try (unfold canMoveTo; apply Forall_app with (l1:=ds) (l2:=[d]); assumption).
+  apply OrdCat with (d1:=ds) (d2:=[d]); assumption.
+  apply CanMoveApp.
+  apply OrdMove; assumption.
+  unfold canMoveTo; apply Forall_app with (l1:=ds) (l2:=[d]); assumption.
 
   (* Step 2: (Txfr d  from p1 to p3) *)
-  Apply Lose2.  Simpl.
-  Apply (Txfr p1 p3).
-  Apply OneCat with a:=d l:=ds; Assumption.
+  apply Lose2. simpl.
+  apply (Txfr p1 p3).
+  apply Forall_elt with (a:=d) (l1:=ds) (l2:=nil); assumption.
 
   (* Step 3: (Move ds from p2 to p3) *)
-  Apply Swap21.  Rewrite app_ass.
-  Apply MOVE;
-    Try (Unfold canMoveTo; Apply AllCat with l1:=ds l2:=`d; Assumption).
-  Apply OrdCat with d1:=ds d2:=`d; Assumption.
-  Rewrite SepCons; Apply CanMoveApp.
-  Apply OrdMove; Assumption.
-  (Unfold canMoveTo; Apply AllCat with l1:=ds l2:=`d; Assumption).
+  apply Swap21. rewrite <- app_assoc.
+  apply MOVE;
+    try (unfold canMoveTo; apply Forall_app with (l1:=ds) (l2:=[d]); assumption).
+  apply OrdCat with (d1:=ds) (d2:=[d]); assumption.
+  apply CanMoveApp.
+  apply OrdMove; assumption.
+  unfold canMoveTo; apply Forall_app with (l1:=ds) (l2:=[d]); assumption.
 Qed.
 
 
 
-Theorem Hanoi :
-  (p1,p2,p3:Pole) (ds:(list Disc))
-  (ordered ds) ->
-  (`((onPole p1 ds) ** (empty p2) ** (empty p3))
+Theorem Hanoi
+  (p1 p2 p3:Pole) (ds:list Disc):
+  ordered ds ->
+  ([(onPole p1 ds) *** (empty p2) *** (empty p3)]
 |-
-  (empty p1) ** (empty p2) ** (onPole p3 ds)).
+  (empty p1) *** (empty p2) *** (onPole p3 ds)).
 Proof.
-Intros. Rewrite (app_nil_end ds). Unfold empty.
-Apply Move; Try (Apply CanMoveEmpty).
-Assumption.
+intros. rewrite <- (app_nil_r ds). unfold empty.
+apply Move; try apply CanMoveEmpty.
+assumption.
 Qed.
-
-

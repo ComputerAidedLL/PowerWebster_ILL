@@ -1,6 +1,5 @@
 -R . LLinCoq
 
-moreLists.v
 ILL.v
 extraLL.v
 blocks.v

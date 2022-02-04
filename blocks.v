@@ -1,15 +1,16 @@
-(*** ******************** ***)
+(*** *********************** ***)
 (*** BLOCKS WORLD EXAMPLE ***)
-(*** ******************** ***)
+(*** *********************** ***)
 
 (* James Power * James.Power@May.ie * http://www.cs.may.ie/~jpower/ *)
 (* Dept. of Computer Science, NUI Maynooth, Co. Kildare, Ireland.   *)
 
 
 (* Need at least the following before this file: ILL.v, extraLL.v *)
+Require Import extraLL.
 
 
-Variable Block:Set.
+Parameter Block:Set.
 
 (* Five predicates desribing the state:
  *   (on x y)  - true if block x is on block y
@@ -19,11 +20,11 @@ Variable Block:Set.
  *   empty     - true if the robot arm is empty 
  *)
 
-Variable on    : Block -> Block -> ILinProp.
-Variable table : Block -> ILinProp.
-Variable clear : Block -> ILinProp.
-Variable holds : Block -> ILinProp.
-Variable empty : ILinProp.
+Parameter on    : Block -> Block -> ILinProp.
+Parameter table : Block -> ILinProp.
+Parameter clear : Block -> ILinProp.
+Parameter holds : Block -> ILinProp.
+Parameter empty : ILinProp.
 
 
 
@@ -33,92 +34,90 @@ Variable empty : ILinProp.
  *)
 
 Axiom get :
-  (x,y:Block)
-  (`(empty ** (clear x))  
-|- (holds x) ** (((table x) -o One) && ((on x y) -o (clear y)))).
+  forall (x y:Block),
+  ([empty *** (clear x)]
+|- (holds x) *** (((table x) --o One) &&& ((on x y) --o (clear y)))).
 
 Axiom put :
-  (x,y:Block)
-  (`(holds x)  
-|- empty ** (clear x) **  ((table x) && ((clear y) -o (on x y)))).
+  forall (x y:Block),
+  ([holds x]
+|- empty *** (clear x) ***  ((table x) &&& ((clear y) --o (on x y)))).
 
 
 (* Now four special cases of these two actions *)
 
 (* 1. Get a block x which is currently on some block y *)
-Lemma geton :
-  (x,y:Block)
-  (`(empty ** (clear x) ** (on x y))  |- (holds x) ** (clear y)).
+Lemma geton 
+  (x y:Block) :
+  ([empty *** (clear x) *** (on x y)]  |- (holds x) *** (clear y)).
 Proof.
-Intros.
-LeftApply TimesAssocR. LeftApply TimesComm. LeftApply TimesLeft.
-LinCut (holds x)**((table x)-oOne)&&((on x y)-o(clear y)).
-Apply get.
-LeftApply TimesLeft.
-LeftApply ExchList.
-Apply TimesRight.
-Apply Identity.
-LeftApply WithLeft2.
-Apply AddNilFront. LeftApply ExchList.
-LeftApply ImpliesLeft.
-Apply Identity.
-(Simpl; Apply Identity).
+leftapply TimesAssocR. leftapply TimesComm. leftapply TimesLeft.
+lincut (holds x)***((table x)--oOne)&&&((on x y)--o(clear y)).
+apply get.
+leftapply TimesLeft.
+leftapply ExchList.
+apply TimesRight.
+apply Identity.
+leftapply WithLeft2.
+apply AddNilFront. leftapply ExchList.
+leftapply ImpliesLeft.
+apply Identity.
+(simpl; apply Identity).
 Qed.
 
 (* 2. Get block x which is currently on the table *)
-Lemma gettb :
-  (x:Block)
-  (`(empty ** (clear x) ** (table x))  |- (holds x)).
+Lemma gettb
+  (x:Block) :
+  ([empty *** (clear x) *** (table x)]  |- (holds x)).
 Proof.
-Intros.
-LeftApply TimesAssocR. LeftApply TimesComm. LeftApply TimesLeft.
-Cut Block; [Intros y | Auto]. (* Introduces y *)
-LinCut (holds x)**((table x)-oOne)&&((on x y)-o(clear y)).
-Apply get.
-LeftApply TimesLeft.
-Rewrite ass_app. LeftApply WithLeft1. 
-Rewrite app_ass. LeftApply ImpliesLeft.
-Apply Identity.
-LeftApply OneLeft.
-Apply Identity.
+leftapply TimesAssocR. leftapply TimesComm. leftapply TimesLeft.
+cut Block; [intros y | auto]. (* introduces y *)
+lincut (holds x)***((table x)--oOne)&&&((on x y)--o(clear y)).
+apply get.
+leftapply TimesLeft.
+rewrite app_assoc. leftapply WithLeft1. 
+rewrite <- app_assoc. leftapply ImpliesLeft.
+apply Identity.
+leftapply OneLeft.
+apply Identity.
 Qed.
 
 (* 3. Put block x (which the arm is holding) onto block y *)
-Lemma puton :
-  (x,y:Block)
-  (`((holds x) ** (clear y)) |- empty ** (clear x) ** (on x y)).
+Lemma puton
+  (x y:Block) :
+  ([(holds x) *** (clear y)] |- empty *** (clear x) *** (on x y)).
 Proof.
-Intros.
-LeftApply TimesComm. LeftApply TimesLeft.
-LinCut (empty**(clear x)**(table x)&&((clear y)-o(on x y))).
-Apply put.
-LeftApply TimesLeft.
-Rewrite ass_app. LeftApply TimesLeft.
-Rewrite ass_app. LeftApply WithLeft2.
-ChangeTo (`(clear y) ^ (`empty ^ `(clear x)) ^ `((clear y)-o(on x y)) |- empty ** (clear x) ** (on x y)).
-LeftApply ImpliesLeft.
-Apply Identity.
-Rewrite app_ass.
-Apply TimesRight; [ Apply Identity | (Apply TimesRight; Apply Identity)].
+intros.
+leftapply TimesComm. leftapply TimesLeft.
+lincut (empty***(clear x)***(table x)&&&((clear y)--o(on x y))).
+apply put.
+leftapply TimesLeft.
+rewrite app_assoc. leftapply TimesLeft.
+rewrite app_assoc. leftapply WithLeft2.
+changeto ([clear y] ++ ([empty] ++ [clear x]) ++ [(clear y)--o(on x y)] |- empty *** (clear x) *** (on x y)).
+leftapply ImpliesLeft.
+apply Identity.
+rewrite <- app_assoc.
+apply TimesRight; [ apply Identity | (apply TimesRight; apply Identity)].
 Qed.
 
 (* 4. Put block x (which the arm is holding) onto the table *)
-Lemma puttb :
-  (x:Block)
-  (`(holds x)  |- empty ** (clear x) ** (table x)).
+Lemma puttb
+  (x:Block) :
+  ([holds x]  |- empty *** (clear x) *** (table x)).
 Proof.
-Intros.
-Cut Block; [Intros y | Auto]. (* Introduces y *)
-LinCut (empty**(clear x)**(table x)&&((clear y)-o(on x y))).
-Apply put.
-LeftApply TimesLeft.
-Apply TimesRight.
-Apply Identity.
-LeftApply TimesLeft.
-Apply TimesRight.
-Apply Identity.
-LeftApply WithLeft1.
-Apply Identity.
+intros.
+cut Block; [intros y | auto]. (* introduces y *)
+lincut (empty***(clear x)***(table x)&&&((clear y)--o(on x y))).
+apply put.
+leftapply TimesLeft.
+apply TimesRight.
+apply Identity.
+leftapply TimesLeft.
+apply TimesRight.
+apply Identity.
+leftapply WithLeft1.
+apply Identity.
 Qed.
 
 
@@ -137,105 +136,102 @@ Qed.
 
 Section BlocksExample.
 
-Variable a,b,c:Block.
+Variable a b c:Block.
 
 (* Six auxiliary lemmas, then the main theorem SwapAB *)
 
 (* 1. Get rid of the info relating to block C (into Top) *)
 Lemma IgnoreC :
-  (`(empty**(clear b)**(on b a)**(table a)**(table c)**(clear c))
- |- empty**(clear b)**(on b a)**(table a)**Top).
+  ([empty***(clear b)***(on b a)***(table a)***(table c)***(clear c)]
+ |- empty***(clear b)***(on b a)***(table a)***Top).
 Proof.
-Do 3 (LeftApply TimesAssocR).
-Do 3 (Apply RTimesAssocR).
-LinSplit.  Apply TopRight.
+do 3 (leftapply TimesAssocR).
+do 3 (apply RTimesAssocR).
+linsplit.  apply TopRight.
 Qed.
 
 (* 2. Pick up block b *)
 Lemma PickUpB :
-  (`(empty**(clear b)**(on b a)**(table a)**Top)
- |- (holds b)**(clear a)**(table a)**Top).
+  ([empty***(clear b)***(on b a)***(table a)***Top]
+ |- (holds b)***(clear a)***(table a)***Top).
 Proof.
-Do 2 (LeftApply TimesAssocR).  (Apply RTimesAssocR).
-LinSplit .
-LeftApply TimesAssocL; Apply geton.
+do 2 (leftapply TimesAssocR).  (apply RTimesAssocR).
+linsplit.
+leftapply TimesAssocL; apply geton.
 Qed.
 
 (* 3. Drop block b onto the table *)
 Lemma DropB :
-  (`((holds b)**(clear a)**(table a)**Top)
- |- empty**(table b)**(clear b)**(clear a)**(table a)**Top).
+  ([(holds b)***(clear a)***(table a)***Top]
+ |- empty***(table b)***(clear b)***(clear a)***(table a)***Top).
 Proof.
-Do 2 (Apply RTimesAssocR).
-LinSplit.
-LinCut empty**(clear b)**(table b).
-Apply puttb.
-Apply RTimesAssocL; LinSplit.
-LeftApply TimesComm; Apply Identity.
+do 2 (apply RTimesAssocR).
+linsplit.
+lincut empty***(clear b)***(table b).
+apply puttb.
+apply RTimesAssocL; linsplit.
+leftapply TimesComm; apply Identity.
 Qed.
 
 (* 4. Pick up block a *)
 Lemma PickUpA :
-  (`(empty**(table b)**(clear b)**(clear a)**(table a)**Top)
- |- (table b)**(clear b)**(holds a)**Top).
+  ([empty***(table b)***(clear b)***(clear a)***(table a)***Top]
+ |- (table b)***(clear b)***(holds a)***Top).
 Proof.
-LeftApply TimesComm.
-LeftApply TimesAssocL. LinSplit.
-LeftApply TimesAssocL. LinSplit.
-LeftApply TimesComm. Do 2 (LeftApply TimesAssocR). LinSplit.
-LeftApply TimesAssocL.
-Apply gettb.
+leftapply TimesComm.
+leftapply TimesAssocL. linsplit.
+leftapply TimesAssocL. linsplit.
+leftapply TimesComm. do 2 (leftapply TimesAssocR). linsplit.
+leftapply TimesAssocL.
+apply gettb.
 Qed.
 
 (* 5. Drop block a onto block b *)
 Lemma DropA :
-  (`((table b)**(clear b)**(holds a)**Top)
-|- (table b)**empty**(on a b)**(clear a)**Top).
+  ([(table b)***(clear b)***(holds a)***Top]
+|- (table b)***empty***(on a b)***(clear a)***Top).
 Proof.
-LinSplit.
-LeftApply TimesAssocR. Do 2 (Apply RTimesAssocR). LinSplit.
-LinCut (empty ** (clear a) ** (on a b)).
-LeftApply TimesComm; Apply puton.
-Apply RTimesAssocL.
-LinSplit.
-Apply RTimesComm.
-Apply Identity.
+linsplit.
+leftapply TimesAssocR. do 2 (apply RTimesAssocR). linsplit.
+lincut (empty *** (clear a) *** (on a b)).
+leftapply TimesComm; apply puton.
+apply RTimesAssocL.
+linsplit.
+apply RTimesComm.
+apply Identity.
 Qed.
 
 (* 6. Get rid of extra info into Top *)
 Lemma TidyUp :
-  (`((table b)**empty**(on a b)**(clear a)**Top) 
- |- (on a b)**Top).
+  ([(table b)***empty***(on a b)***(clear a)***Top]
+ |- (on a b)***Top).
 Proof.
-Do 2 (LeftApply TimesAssocR). LeftApply TimesComm. 
-LeftApply TimesAssocR. LeftApply TimesComm.
-LeftApply TimesLeft.
-LinSplit.
-Apply TopRight.
+do 2 (leftapply TimesAssocR). leftapply TimesComm.
+leftapply TimesAssocR. leftapply TimesComm.
+leftapply TimesLeft.
+linsplit.
+apply TopRight.
 Qed.
 
 
 (* The theorem: cut-and-apply _forwards_ through the states *)
 
 Theorem SwapAB :
-  (`(empty ** (clear b) ** (on b a) ** (table a) ** (table c) ** (clear c))
+  ([empty *** (clear b) *** (on b a) *** (table a) *** (table c) *** (clear c)]
 |-
-  (on a b) ** Top).
+  (on a b) *** Top).
 Proof.
-LinCut ((empty)**(clear b)**(on b a)**(table a)**Top). 
-Apply IgnoreC.
-LinCut ((holds b)**(clear a)**(table a)**Top). 
-Apply PickUpB.
-LinCut (empty**(table b)**(clear b)**(clear a)**(table a)**Top). 
-Apply DropB.
-LinCut ((table b)**(clear b)**(holds a)**Top). 
-Apply PickUpA.
-LinCut ((table b)**empty**(on a b)**(clear a)**Top). 
-Apply DropA.
-Apply TidyUp.
+lincut ((empty)***(clear b)***(on b a)***(table a)***Top). 
+apply IgnoreC.
+lincut ((holds b)***(clear a)***(table a)***Top). 
+apply PickUpB.
+lincut (empty***(table b)***(clear b)***(clear a)***(table a)***Top). 
+apply DropB.
+lincut ((table b)***(clear b)***(holds a)***Top). 
+apply PickUpA.
+lincut ((table b)***empty***(on a b)***(clear a)***Top). 
+apply DropA.
+apply TidyUp.
 Qed.
 
 End BlocksExample.
-
-
-

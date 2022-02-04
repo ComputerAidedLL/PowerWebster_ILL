@@ -10,9 +10,9 @@
  * as well as some lemmas relating to quantification over disc-lists
  *)
 
-Require PolyList.
-Require TheoryList.
-Require PolyListSyntax.
+From Coq Require Import List.
+Import ListNotations.
+Notation Empty := (@nil _).
 
 (*************)
 (*** DISCS ***)
@@ -22,120 +22,70 @@ Parameter Disc : Set.
 
 Parameter smaller : Disc -> Disc -> Prop.
 
-Hypothesis smallTrans : 
-  (x,y,z:Disc) (smaller x y) -> (smaller y z) -> (smaller x z).
+Axiom smallTrans :
+  forall (x y z:Disc), (smaller x y) -> (smaller y z) -> (smaller x z).
 
 (* Can we transfer a disc onto a pole? *)
-Definition canTxfrTo : Disc -> (list Disc) -> Prop :=
-  [d:Disc][ds:(list Disc)] 
-  (AllS ([d':Disc](smaller d d')) ds).
+Definition canTxfrTo : Disc -> list Disc -> Prop :=
+  fun (d:Disc) (ds:list Disc) =>
+  (Forall (fun d':Disc => smaller d d') ds).
 
 (* Can we move a disc-list onto a pole? *)
-Definition canMoveTo : (list Disc) -> (list Disc) -> Prop :=
-  [d1,d2:(list Disc)] 
-  (AllS ([d':Disc](canTxfrTo d' d2)) d1).
+Definition canMoveTo : list Disc -> list Disc -> Prop :=
+  fun d1 d2:list Disc =>
+  (Forall (fun d':Disc => canTxfrTo d' d2) d1).
 
 (* When is a list of discs in order? *)
-Inductive ordered : (list Disc) -> Prop :=
-  ord_nil : (ordered Empty)
-| ord_cons : (d:Disc)(ds:(list Disc))
-             (canTxfrTo d ds) -> (ordered ds) -> (ordered (cons d ds)).
+Inductive ordered : list Disc -> Prop :=
+  ord_nil : ordered Empty
+| ord_cons : forall (d:Disc)(ds:list Disc),
+             canTxfrTo d ds -> ordered ds -> ordered (cons d ds).
 
 
-(* *************************** *)
-(* Quantifying over disc-lists *)
-(* *************************** *)
-
-(* Working with reverse induction and AllS... *)
-Lemma OneCat :
-  (A:Set) (P:A->Prop) (a:A)(l:(list A))
-  (AllS P (l^`a)) -> (P a).
+Lemma CanMoveEmpty
+  (ds:list Disc): canMoveTo ds Empty.
 Proof.
-Induction l; Simpl.
-Intros AS; Inversion AS; Assumption.
-Intros a0 l2 IH AS; Inversion AS; Apply IH; Assumption.
-Qed.
-
-Lemma AllCat :
-  (A:Set) (P:A->Prop) (l1,l2:(list A))
-  (AllS P (l1^l2)) -> (AllS P l1).
-Proof.
-Induction l1.
-Intros; Apply allS_nil.
-Intros a l IH l2 AS. Simpl in AS. Inversion AS.
-Apply allS_cons; [ Assumption | Apply (IH l2); Assumption].
-Qed.
-
-Lemma AllCat2 :
-  (A:Set) (P:A->Prop) (l1,l2:(list A))
-  (AllS P (l1^l2)) -> (AllS P l2).
-Proof.
-Induction l1.
-Simpl; Intros; Assumption.
-Intros a l IH l2 AS; Simpl in AS; Inversion AS; Apply (IH l2 H2).
-Qed.
-
-Lemma AllCat_Ind :
-  (A:Set) (P:A->Prop) (l1,l2:(list A))
-  (AllS P l1) -> (AllS P l2) -> (AllS P (l1^l2)).
-Proof.
-Induction l1.
-Simpl; Intros; Assumption.
-Intros a l IH l2 AS1 AS2; Inversion AS1; Simpl.
-Apply allS_cons; [ Assumption | (Apply (IH l2); Assumption)].
+induction ds; unfold canMoveTo.
+apply Forall_nil.
+intros; unfold canTxfrTo; apply Forall_cons; [ apply Forall_nil| assumption].
 Qed.
 
 
-Lemma CanMoveEmpty :
-  (ds:(list Disc)) (canMoveTo ds Empty).
+Lemma CanMoveApp
+  (ds d1 d2:list Disc):
+  canMoveTo ds d1 -> canMoveTo ds d2 -> canMoveTo ds (d1++d2).
 Proof.
-(Induction ds; Unfold canMoveTo).
-Apply allS_nil.
-Intros; Unfold canTxfrTo; Apply allS_cons; [ Apply allS_nil| Assumption].
+induction ds as [|a l IH].
+intros; simpl; unfold canMoveTo; apply Forall_nil.
+intros CM1 CM2.
+unfold canMoveTo in CM1; inversion CM1.
+unfold canMoveTo in CM2; inversion CM2.
+unfold canMoveTo; apply Forall_cons.
+unfold canTxfrTo; apply Forall_app; split; assumption.
+apply IH; assumption.
 Qed.
 
 
-Lemma CanMoveApp : 
-  (ds,d1,d2:(list Disc))
-  (canMoveTo ds d1) -> (canMoveTo ds d2) -> (canMoveTo ds (d1^d2)).
+Lemma OrdCat
+  (d1 d2:list Disc): ordered (d1++d2) -> ordered d1.
 Proof.
-Induction ds.
-Intros; Simpl; Unfold canMoveTo; Apply allS_nil.
-Intros a l IH d1 d2 CM1 CM2.
-Unfold canMoveTo in CM1; Inversion CM1.
-Unfold canMoveTo in CM2; Inversion CM2.
-Unfold canMoveTo; Apply allS_cons.
-Unfold canTxfrTo; Apply AllCat_Ind; Assumption.
-Apply (IH d1 d2); Assumption.
+induction d1 as [|a l IH].
+intros; apply ord_nil.
+intros ORD.
+simpl in ORD; inversion ORD; apply ord_cons.
+unfold canTxfrTo; unfold canTxfrTo in H1;
+  apply Forall_app with (l1:=l) (l2:=d2); assumption.
+apply (IH H2).
 Qed.
 
-
-Lemma OrdCat :
-  (d1,d2:(list Disc)) (ordered (d1^d2)) -> (ordered d1).
+Lemma OrdMove
+  (d1 d2:list Disc): ordered (d1++d2) -> canMoveTo d1 d2.
 Proof.
-Induction d1.
-Intros; Apply ord_nil.
-Intros a l IH d2 ORD.
-Simpl in ORD; Inversion ORD; Apply ord_cons.
-Unfold canTxfrTo; Unfold canTxfrTo in H1;
-  Apply AllCat with l1:=l l2:=d2; Assumption.
-Apply (IH d2 H2).
+induction d1 as [|a l IH].
+intros; unfold canMoveTo; apply Forall_nil.
+intros ORD; simpl in ORD; inversion ORD.
+unfold canMoveTo; unfold canMoveTo in IH; apply Forall_cons.
+unfold canTxfrTo; unfold canTxfrTo in H1.
+apply Forall_app with (l1:=l) (l2:=d2); assumption.
+apply IH; assumption.
 Qed.
-
-Lemma OrdMove :
-  (d1,d2:(list Disc)) (ordered (d1^d2)) -> (canMoveTo d1 d2).
-Proof.
-Induction d1.
-Intros; Unfold canMoveTo; Apply allS_nil.
-Intros a l IH d2 ORD; Simpl in ORD; Inversion ORD.
-Unfold canMoveTo; Unfold canMoveTo in IH; Apply allS_cons.
-Unfold canTxfrTo; Unfold canTxfrTo in H1.
-Apply AllCat2 with l1:=l l2:=d2; Assumption.
-Apply (IH d2); Assumption.
-Qed.
-
-
-
-
-
-
