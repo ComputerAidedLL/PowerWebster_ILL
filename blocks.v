@@ -41,7 +41,7 @@ Axiom get :
 Axiom put :
   forall (x y:Block),
   ([holds x]
-|- empty *** (clear x) ***  ((table x) &&& ((clear y) --o (on x y)))).
+|- empty *** (clear x) *** ((table x) &&& ((clear y) --o (on x y)))).
 
 
 (* Now four special cases of these two actions *)
@@ -52,7 +52,7 @@ Lemma geton
   ([empty *** (clear x) *** (on x y)]  |- (holds x) *** (clear y)).
 Proof.
 leftapply TimesAssocR. leftapply TimesComm. leftapply TimesLeft.
-lincut (holds x)***((table x)--oOne)&&&((on x y)--o(clear y)).
+lincut (holds x) *** ((table x) --o One) &&& ((on x y) --o (clear y)).
 apply get.
 leftapply TimesLeft.
 leftapply ExchList.
@@ -72,7 +72,7 @@ Lemma gettb
 Proof.
 leftapply TimesAssocR. leftapply TimesComm. leftapply TimesLeft.
 cut Block; [intros y | auto]. (* introduces y *)
-lincut (holds x)***((table x)--oOne)&&&((on x y)--o(clear y)).
+lincut (holds x) *** ((table x) --o One) &&& ((on x y) --o (clear y)).
 apply get.
 leftapply TimesLeft.
 rewrite app_assoc. leftapply WithLeft1. 
@@ -89,12 +89,12 @@ Lemma puton
 Proof.
 intros.
 leftapply TimesComm. leftapply TimesLeft.
-lincut (empty***(clear x)***(table x)&&&((clear y)--o(on x y))).
+lincut (empty *** (clear x) *** (table x) &&& ((clear y) --o (on x y))).
 apply put.
 leftapply TimesLeft.
 rewrite app_assoc. leftapply TimesLeft.
 rewrite app_assoc. leftapply WithLeft2.
-changeto ([clear y] ++ ([empty] ++ [clear x]) ++ [(clear y)--o(on x y)] |- empty *** (clear x) *** (on x y)).
+changeto ([clear y] ++ ([empty] ++ [clear x]) ++ [(clear y) --o (on x y)] |- empty *** (clear x) *** (on x y)).
 leftapply ImpliesLeft.
 apply Identity.
 rewrite <- app_assoc.
@@ -104,11 +104,11 @@ Qed.
 (* 4. Put block x (which the arm is holding) onto the table *)
 Lemma puttb
   (x:Block) :
-  ([holds x]  |- empty *** (clear x) *** (table x)).
+  ([holds x] |- empty *** (clear x) *** (table x)).
 Proof.
 intros.
 cut Block; [intros y | auto]. (* introduces y *)
-lincut (empty***(clear x)***(table x)&&&((clear y)--o(on x y))).
+lincut (empty *** (clear x) *** (table x) &&& ((clear y) --o (on x y))).
 apply put.
 leftapply TimesLeft.
 apply TimesRight.
