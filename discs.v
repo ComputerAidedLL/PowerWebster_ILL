@@ -10,7 +10,7 @@
  * as well as some lemmas relating to quantification over disc-lists
  *)
 
-From Coq Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 Notation Empty := (@nil _).
 

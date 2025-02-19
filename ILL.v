@@ -34,7 +34,7 @@ Infix "--o" := Implies (at level 8).
 (*****    Natural Deduction Rules      *****)
 (*******************************************)
 
-From Coq Require Export List.
+From Stdlib Require Export List.
 Export ListNotations.
 Notation Empty := (@nil _).
 
