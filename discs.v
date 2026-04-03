@@ -12,7 +12,7 @@
 
 From Stdlib Require Import List.
 Import ListNotations.
-Notation Empty := (@nil _).
+Abbreviation Empty := (@nil _).
 
 (*************)
 (*** DISCS ***)

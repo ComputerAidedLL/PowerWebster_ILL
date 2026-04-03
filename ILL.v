@@ -36,7 +36,7 @@ Infix "--o" := Implies (at level 8).
 
 From Stdlib Require Export List.
 Export ListNotations.
-Notation Empty := (@nil _).
+Abbreviation Empty := (@nil _).
 
 Reserved Notation "c1 |- c2" (at level 65).
 
